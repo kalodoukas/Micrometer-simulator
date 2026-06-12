@@ -2,508 +2,122 @@
 <html lang="el">
 <head>
   <meta charset="UTF-8">
-  <title>Micrometer readings simulator</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Protected Application</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background: #f4f4f4;
+      font-family: Arial, Helvetica, sans-serif;
       margin: 0;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 12px;
-    }
-
-    h1 {
-      font-size: 22px;
-      margin: 0;
-    }
-
-    canvas {
       background: #f7f7f7;
-      border-radius: 16px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      color: #222;
     }
-
-    .controls {
-      display: flex;
-      gap: 8px;
-      margin-top: 10px;
-      flex-wrap: wrap;
-      justify-content: center;
+    .status {
+      max-width: 760px;
+      margin: 60px auto;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 26px 30px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+      line-height: 1.55;
     }
-
-    .controls button {
-      padding: 6px 10px;
+    .error {
+      color: #b00020;
+    }
+    code {
+      background: #f1f1f1;
+      padding: 2px 5px;
       border-radius: 4px;
-      border: 1px solid #999;
-      background: #eaeaea;
-      cursor: pointer;
-      font-size: 12px;
     }
-
-    .controls button:hover {
-      background: #dcdcdc;
-    }
-
-    #toggleDigital {
-      padding: 6px 12px;
-      border-radius: 4px;
-      border: 1px solid #666;
-      background: #0066cc;
-      color: #fff;
-      cursor: pointer;
-      font-size: 12px;
-      margin-top: 6px;
-      margin-bottom: 2px;
-    }
-    #toggleDigital.off {
-      background: #555;
-    }
-
-    .reading-panel {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      padding: 8px 12px;
-      background: #ffffff;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.08);
-      min-width: 360px;
-      font-size: 14px;
-    }
-
-    .reading-row {
-      display: flex;
-      justify-content: space-between;
-    }
-
-    .reading-row .label {
-      font-weight: bold;
-    }
-
-
-    /* PWA / mobile friendly scaling */
-    canvas {
-      max-width: 100%;
-      height: auto;
-      touch-action: none;
-    }
-
-    @media (max-width: 700px) {
-      body {
-        padding: 10px;
-        gap: 10px;
-      }
-
-      h1 {
-        font-size: 18px;
-        text-align: center;
-      }
-
-      .reading-panel {
-        min-width: unset;
-        width: calc(100% - 24px);
-        font-size: 13px;
-      }
-
-      .controls button, #toggleDigital {
-        font-size: 12px;
-        padding: 8px 10px;
-      }
-    }
-
   </style>
-
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#0066cc">
-  <meta name="description" content="Micrometer readings simulator PWA by N. Kalodoukas">
-  <link rel="manifest" href="manifest.json">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
 </head>
 <body>
-
-<h1>Micrometer readings simulator</h1>
-
-<canvas id="micrometerCanvas" width="864" height="400"></canvas>
-
-<div class="controls">
-  <button id="fastLeft">Rotate -10 divisions</button>
-  <button id="stepLeft">-1 division (−0.01 mm)</button>
-  <button id="stepRight">+1 division (+0.01 mm)</button>
-  <button id="fastRight">+10 divisions</button>
-</div>
-
-<button id="toggleDigital">Digital display: ON</button>
-
-<div class="reading-panel">
-  <div class="reading-row">
-    <span class="label">Divisions (reading):</span>
-    <span id="divValue">0 / 2500</span>
+  <div class="status" id="status">
+    <h2>Application integrity check</h2>
+    <p>Checking file integrity before execution...</p>
   </div>
-  <div class="reading-row">
-    <span class="label">Sleeve (0.5 mm step):</span>
-    <span id="sleeveValue">0.00 mm</span>
-  </div>
-  <div class="reading-row">
-    <span class="label">Thimble (0.01 mm):</span>
-    <span id="thimbleValue">0.00 mm</span>
-  </div>
-  <div class="reading-row">
-    <span class="label">Total reading (mm):</span>
-    <span id="totalValue">0.00 mm</span>
-  </div>
-</div>
 
-<script>
-  const canvas = document.getElementById("micrometerCanvas");
-  const ctx    = canvas.getContext("2d");
+  <script>
+  (async function () {
+    "use strict";
 
-  const divValueEl    = document.getElementById("divValue");
-  const sleeveValueEl = document.getElementById("sleeveValue");
-  const thimbleValueEl= document.getElementById("thimbleValue");
-  const totalValueEl  = document.getElementById("totalValue");
+    const EXPECTED_SHA256 = "2781690474845504a0b7653e85d316e8abad17963fb58d9aaae452ca7686653c";
+    const APP_FILE = "app.js";
+    const AUTHOR = "N. Kalodoukas";
+    const APP_ID = "NK-HTML-LOCKED-BUILD";
+    const ORIGINAL_FILE = "index.html";
 
-  const readingPanel  = document.querySelector(".reading-panel");
-  const toggleDigitalBtn = document.getElementById("toggleDigital");
-  let digitalVisible = true;
+    function showError(title, message) {
+      document.body.innerHTML = `
+        <div class="status error">
+          <h2>${title}</h2>
+          <p>${message}</p>
+          <p><strong>The application has been stopped for protection reasons.</strong></p>
+        </div>
+      `;
+    }
 
-  // ---- Micrometer parameters ----
-  const totalRangeMm     = 25.0;          // 0–25 mm
-  const pitchPerTurnMm   = 0.5;
-  const divisionsPerTurn = 50;            // 50 divisions/turn
-  const mmPerDivision    = pitchPerTurnMm / divisionsPerTurn; // 0.01 mm
+    async function sha256Hex(text) {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(text);
+      const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+    }
 
-  const maxReadingDiv = Math.round(totalRangeMm / mmPerDivision); // 2500
-  const minReadingDiv = 0;
-
-  // --- SINGLE SCALE FACTOR: ίδια px/mm για sleeve & thimble ---
-  const pxPerMm = 20;              // <- άλλαξέ το αν θες άλλη κλίμακα
-
-  const thimbleDiamMm = 15.0;
-  const sleeveDiamMm  = 11.0;
-
-  const thimbleRadiusPx = (thimbleDiamMm * pxPerMm) / 2;
-  const sleeveRadiusPx  = (sleeveDiamMm  * pxPerMm) / 2;
-
-  const sleeveLengthPx  = totalRangeMm * pxPerMm;   // 25 mm → 25 * pxPerMm px
-
-  // Geometry on canvas
-  const axisY         = canvas.height / 2;
-  const sleeveCenterY = axisY;
-  const thimbleCenterY= axisY;
-
-  const sleeveStartX  = (canvas.width - sleeveLengthPx) / 2;
-
-  // rotation / projection
-  const angleStep       = 2 * Math.PI / divisionsPerTurn;
-  const TWO_PI          = 2 * Math.PI;
-  const maxVisibleAngle = Math.PI / 2;   // ±90°
-
-  // internal resolution = 1 μm
-  const MICRONS_PER_DIV = 10;      // 1 division = 0.01 mm = 10 μm
-  const MICRONS_PER_MM  = 1000;
-  const maxMicrons      = totalRangeMm * MICRONS_PER_MM; // 25000 μm
-
-  let posMicrons = 0;
-  let rotDiv     = 0;
-
-  function clampMicrons(m) {
-    if (m < 0) return 0;
-    if (m > maxMicrons) return maxMicrons;
-    return m;
-  }
-
-  function getReadingDiv() {
-    return Math.floor(posMicrons / MICRONS_PER_DIV);
-  }
-
-  // ----- Sleeve -----
-  function drawSleeveScale() {
-    ctx.save();
-
-    const bodyX = sleeveStartX - 12;
-    const bodyW = sleeveLengthPx + 24;
-    const bodyY = sleeveCenterY - sleeveRadiusPx;
-    const bodyH = sleeveRadiusPx * 2;
-
-    const gradBody = ctx.createLinearGradient(bodyX, bodyY, bodyX, bodyY + bodyH);
-    gradBody.addColorStop(0, "#f2f2f2");
-    gradBody.addColorStop(0.25, "#dedede");
-    gradBody.addColorStop(0.5, "#c3c3c3");
-    gradBody.addColorStop(0.8, "#e3e3e3");
-    gradBody.addColorStop(1, "#fafafa");
-    ctx.fillStyle = gradBody;
-    ctx.fillRect(bodyX, bodyY, bodyW, bodyH);
-
-    const axisLineY = sleeveCenterY;
-    ctx.strokeStyle = "#000";
-    ctx.lineWidth = 1.2;
-    ctx.beginPath();
-    ctx.moveTo(sleeveStartX, axisLineY);
-    ctx.lineTo(sleeveStartX + sleeveLengthPx, axisLineY);
-    ctx.stroke();
-
-    for (let i = 0; i <= totalRangeMm * 2; i++) {
-      const mmValue = i * 0.5;
-      const x = sleeveStartX + mmValue * pxPerMm;   // ίδια px/mm
-
-      if (i % 2 === 0) {
-        // ολόκληρα mm
-        const tickLen = 10;
-        ctx.strokeStyle = "#000";
-        ctx.lineWidth = 0.7;
-        ctx.beginPath();
-        ctx.moveTo(x, axisLineY);
-        ctx.lineTo(x, axisLineY - tickLen);
-        ctx.stroke();
-
-        if (mmValue % 5 === 0) {
-          ctx.font = "11px Arial";
-          ctx.fillStyle = "#000";
-          ctx.textAlign = "center";
-          ctx.textBaseline = "bottom";
-          ctx.fillText(mmValue.toString(), x, axisLineY - tickLen - 2);
-        }
-      } else {
-        // μισά mm
-        const tickLen = 6;
-        ctx.strokeStyle = "#000";
-        ctx.lineWidth = 0.55;
-        ctx.beginPath();
-        ctx.moveTo(x, axisLineY);
-        ctx.lineTo(x, axisLineY + tickLen);
-        ctx.stroke();
+    try {
+      if (!window.crypto || !window.crypto.subtle) {
+        showError(
+          "Integrity check unavailable",
+          "This browser does not support Web Crypto API, or the file is running in an unsupported environment."
+        );
+        return;
       }
-    }
 
-    ctx.restore();
-  }
+      const response = await fetch(APP_FILE, {
+        cache: "no-store",
+        headers: { "Cache-Control": "no-cache" }
+      });
 
-  // ----- Thimble body & marks -----
-  function drawThimbleBody(positionMm, rotDivParam) {
-    ctx.save();
-
-    // ίδια ακτίνα για καμπυλότητα και ύψος
-    const scaleAmp = thimbleRadiusPx;       // καμπυλότητα ticks
-    const bodyW    = sleeveLengthPx + 60;
-    const bodyH    = scaleAmp * 2;          // ύψος = 2 * ακτίνα
-    const leftEdgeX = sleeveStartX + positionMm * pxPerMm + 2;
-    const bodyX   = leftEdgeX;
-    const bodyY   = thimbleCenterY - scaleAmp;
-
-    // Σώμα κυλίνδρου χωρίς περίγραμμα, τύπου sleeve
-    const grad = ctx.createLinearGradient(bodyX, bodyY, bodyX, bodyY + bodyH);
-    grad.addColorStop(0,   "#f2f2f2");
-    grad.addColorStop(0.25,"#dedede");
-    grad.addColorStop(0.5, "#c0c0c0");
-    grad.addColorStop(0.8, "#e2e2e2");
-    grad.addColorStop(1,   "#fafafa");
-    ctx.fillStyle = grad;
-    ctx.fillRect(bodyX, bodyY, bodyW, bodyH);
-
-    // Λευκή αντανάκλαση
-    ctx.strokeStyle = "rgba(255,255,255,0.7)";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(bodyX + 12, thimbleCenterY - scaleAmp * 0.6);
-    ctx.lineTo(bodyX + bodyW - 12, thimbleCenterY - scaleAmp * 0.6);
-    ctx.stroke();
-
-    // ---- Χαράξεις εκατοστών του χιλιοστού ----
-    const lenSmallMm  = 2;
-    const lenMediumMm = 3;
-    const lenLargeMm  = 4;
-    const scaleStartX = bodyX + 2;
-
-    // δεξιόστροφη βίδα: αντιστροφή φοράς (−offsetAngle ...)
-    let angleOffsetDiv = rotDivParam % divisionsPerTurn;
-    if (angleOffsetDiv < 0) angleOffsetDiv += divisionsPerTurn;
-    const offsetAngle = angleOffsetDiv * angleStep;
-
-    const showNumbers = [0,5,10,15,20,25,30,35,40,45];
-
-    for (let k = 0; k < divisionsPerTurn; k++) {
-      // αντιστραμμένη φορά περιστροφής
-      const rawAngle = -offsetAngle - k * angleStep;
-
-      // wrap σε [-π, π]
-      let angle = ((rawAngle + Math.PI) % TWO_PI + TWO_PI) % TWO_PI - Math.PI;
-
-      if (Math.abs(angle) > maxVisibleAngle) continue;
-
-      const y = thimbleCenterY - scaleAmp * Math.sin(angle);
-
-      let lenMm;
-      if (k % 10 === 0) {
-        lenMm = lenLargeMm;
-      } else if (k % 5 === 0) {
-        lenMm = lenMediumMm;
-      } else {
-        lenMm = lenSmallMm;
+      if (!response.ok) {
+        showError(
+          "Application file loading failed",
+          "The file <code>app.js</code> could not be loaded."
+        );
+        return;
       }
-      const tickLenPx = lenMm * pxPerMm;
 
-      ctx.strokeStyle = "#000";
-      ctx.lineWidth   = (k % 10 === 0) ? 1.0 : (k % 5 === 0 ? 0.75 : 0.5);
-      ctx.beginPath();
-      ctx.moveTo(scaleStartX, y);
-      ctx.lineTo(scaleStartX + tickLenPx, y);
-      ctx.stroke();
+      const appCode = await response.text();
+      const actualHash = await sha256Hex(appCode);
 
-      // ΑΡΙΘΜΟΙ με ημιτονική παραμόρφωση όπως τα σημάδια
-      if (showNumbers.includes(k)) {
-        ctx.save();
-        ctx.font = "10px Arial";
-        ctx.textAlign = "left";
-        ctx.textBaseline = "middle";
-
-        // Παραμόρφωση ύψους ανάλογα με τη γωνία
-        let scaleY = 0.6 + 0.4 * Math.cos(angle);
-        if (scaleY < 0.3) scaleY = 0.3;
-
-        // Φωτεινότητα: πιο έντονοι στο κέντρο, πιο αχνές άκρες
-        const intensity = 0.4 + 0.6 * Math.cos(Math.abs(angle));
-        ctx.fillStyle = `rgba(0,0,0,${intensity.toFixed(2)})`;
-
-        // 🔁 ΑΝΤΙΣΤΡΟΦΗ ΑΡΙΘΜΗΣΗΣ:
-        // αντί για "k" δείχνουμε "50 - k (mod 50)",
-        // ώστε όταν αυξάνει η ένδειξη, τα νούμερα να αυξάνουν.
-        const labelNum = (50 - k) % 50;
-
-        ctx.translate(scaleStartX + tickLenPx + 4, y);
-        ctx.scale(1, scaleY);
-        ctx.fillText(labelNum.toString(), 0, 0);
-        ctx.restore();
+      if (actualHash !== EXPECTED_SHA256) {
+        showError(
+          "Integrity check failed",
+          "The file <code>app.js</code> has been modified or corrupted. The application will not run."
+        );
+        console.error("Checksum failed", {
+          expected: EXPECTED_SHA256,
+          actual: actualHash,
+          author: AUTHOR,
+          appId: APP_ID,
+          originalFile: ORIGINAL_FILE
+        });
+        return;
       }
+
+      const script = document.createElement("script");
+      script.textContent = appCode;
+      document.body.appendChild(script);
+
+    } catch (error) {
+      console.error(error);
+      showError(
+        "Integrity check error",
+        "An error occurred during integrity verification or application execution."
+      );
     }
-
-    ctx.restore();
-  }
-
-  function updateReadings() {
-    let readingDiv = getReadingDiv();
-    if (readingDiv < minReadingDiv) readingDiv = minReadingDiv;
-    if (readingDiv > maxReadingDiv) readingDiv = maxReadingDiv;
-
-    const totalMm   = readingDiv * mmPerDivision;
-    const sleeveMm  = Math.floor(totalMm * 2) / 2;
-    const thimbleMm = totalMm - sleeveMm;
-
-    if (digitalVisible) {
-      divValueEl.textContent     = readingDiv + " / " + maxReadingDiv;
-      sleeveValueEl.textContent  = sleeveMm.toFixed(2) + " mm";
-      thimbleValueEl.textContent = thimbleMm.toFixed(2) + " mm";
-      totalValueEl.textContent   = totalMm.toFixed(2) + " mm";
-    }
-  }
-
-  function drawAll() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const positionMm = posMicrons / MICRONS_PER_MM;
-    drawSleeveScale();
-    drawThimbleBody(positionMm, rotDiv);
-    updateReadings();
-  }
-
-  // ---- moveMicrons: κλειδώνει ακριβώς στο 0 και στο 25 mm ----
-  function moveMicrons(deltaMicro) {
-    let newPos = posMicrons + deltaMicro;
-
-    // Κάτω από 0 → κλείδωμα στο απόλυτο μηδέν
-    if (newPos <= 0) {
-      posMicrons = 0;
-      rotDiv = 0;
-      drawAll();
-      return;
-    }
-
-    // Πάνω από τη μέγιστη διαδρομή → κλείδωμα στο 25.00 mm
-    if (newPos >= maxMicrons) {
-      posMicrons = maxMicrons;
-      rotDiv = maxMicrons / MICRONS_PER_DIV;
-      drawAll();
-      return;
-    }
-
-    // Εντός ορίων
-    posMicrons = newPos;
-    rotDiv = posMicrons / MICRONS_PER_DIV;
-    drawAll();
-  }
-
-  function makeContinuousButton(buttonId, deltaMicroPerTick, intervalMs = 20) {
-    const btn = document.getElementById(buttonId);
-    let interval = null;
-
-    const start = () => {
-      if (interval !== null) return;
-      interval = setInterval(() => {
-        moveMicrons(deltaMicroPerTick);
-      }, intervalMs);
-    };
-
-    const stop = () => {
-      if (interval !== null) {
-        clearInterval(interval);
-        interval = null;
-      }
-    };
-
-    btn.addEventListener("mousedown", (e) => {
-      e.preventDefault();
-      start();
-    });
-
-    btn.addEventListener("touchstart", (e) => {
-      e.preventDefault();
-      start();
-    }, { passive: false });
-
-    ["mouseup", "mouseleave"].forEach(ev => {
-      btn.addEventListener(ev, stop);
-    });
-    ["mouseup", "mouseleave"].forEach(ev => {
-      document.addEventListener(ev, stop);
-    });
-    document.addEventListener("touchend", stop);
-  }
-
-  // continuous buttons: 1 μm & 10 μm / 20 ms
-  makeContinuousButton("stepLeft",  -1, 20);
-  makeContinuousButton("stepRight", +1, 20);
-  makeContinuousButton("fastLeft",  -10, 20);
-  makeContinuousButton("fastRight", +10, 20);
-
-  // --- Toggle ψηφιακής ένδειξης ---
-  toggleDigitalBtn.addEventListener("click", () => {
-    digitalVisible = !digitalVisible;
-    if (digitalVisible) {
-      readingPanel.style.display = "flex";
-      toggleDigitalBtn.textContent = "Digital display: ON";
-      toggleDigitalBtn.classList.remove("off");
-      updateReadings();
-    } else {
-      readingPanel.style.display = "none";
-      toggleDigitalBtn.textContent = "Digital display: OFF";
-      toggleDigitalBtn.classList.add("off");
-    }
-  });
-
-  drawAll();
-
-
-  // Register Service Worker for offline PWA use
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("service-worker.js")
-        .catch(err => console.log("Service Worker registration failed:", err));
-    });
-  }
-
-</script>
-
+  })();
+  </script>
 </body>
 </html>
